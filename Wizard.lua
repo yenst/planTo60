@@ -80,7 +80,8 @@ local STEPS = {
         update = function(page)
             page.level:Update()
             page.deadline:Update()
-            page.warning:SetText(warning())
+            local problem = ns.Editors.Problem(ns.char, draft)
+            page.warning:SetText(problem and (Theme.Hex(Theme.warn) .. problem .. "|r") or "")
         end,
     },
     {

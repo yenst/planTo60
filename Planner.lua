@@ -367,66 +367,177 @@ end
 
 -- Settings ----------------------------------------------------------------
 
+local ROW_H = 30
+local ROW_PAD = 12
+
+-- One card per section: rows with the label on the left and the control on
+-- the right edge, so every control sits on the same axis.
+local function settingsCard(page, title, y, rows, border)
+    heading(page, title, y)
+    local card = W.Panel(page, Theme.bgRaised)
+    card:SetPoint("TOPLEFT", 0, y - 20)
+    card:SetSize(CONTENT_W, #rows * ROW_H)
+    if border then
+        card:SetBackdropBorderColor(unpack(border))
+    end
+    for i, build in ipairs(rows) do
+        local row = CreateFrame("Frame", nil, card)
+        row:SetPoint("TOPLEFT", 0, -(i - 1) * ROW_H)
+        row:SetSize(CONTENT_W, ROW_H)
+        if i > 1 then
+            local line = W.Line(row)
+            line:SetPoint("TOPLEFT", ROW_PAD, 0)
+            line:SetPoint("TOPRIGHT", -ROW_PAD, 0)
+        end
+        build(row)
+    end
+    return y - 20 - #rows * ROW_H - 18
+end
+
+local function rowLabel(row, text)
+    row.label = W.Text(row, 12)
+    row.label:SetPoint("LEFT", ROW_PAD, 0)
+    row.label:SetText(text)
+end
+
+-- Rows that depend on another setting dim while it is off; a cover over the
+-- control swallows clicks and the wheel.
+local covers = {}
+local function setRowEnabled(row, on)
+    row.label:SetTextColor(unpack(on and Theme.text or Theme.muted))
+    local control = row.control
+    local cover = covers[control]
+    if not cover then
+        cover = CreateFrame("Frame", nil, control)
+        cover:SetAllPoints()
+        cover:SetFrameLevel(control:GetFrameLevel() + 10)
+        cover:EnableMouse(true)
+        cover:EnableMouseWheel(true)
+        covers[control] = cover
+    end
+    cover:SetShown(not on)
+    control:SetAlpha(on and 1 or 0.35)
+end
+
 local function buildSettings(page)
     local settings = ns.db.settings
-    heading(page, "Tracker", 0)
-    local y = -24
-    local toggles = {}
-    local function toggle(label, key)
-        local t = W.Toggle(page, label, function() return settings[key] end, function(v)
-            settings[key] = v
-            ns.Refresh()
-        end)
-        t:SetPoint("TOPLEFT", 0, y)
-        y = y - 24
-        toggles[#toggles + 1] = t
+    local toggles, dependents = {}, {}
+
+    local function set(key, v)
+        settings[key] = v
+        ns.Refresh()
     end
-    toggle("Show tracker", "showTracker")
-    toggle("Lock tracker position", "lockTracker")
-    local scale = W.Stepper(page, 110, W.Range(0.6, 1.61, 0.1), function(v) return string.format("%d%%", v * 100 + 0.5) end,
-        function() return settings.trackerScale end,
-        function(v)
-            settings.trackerScale = v
-            ns.Refresh()
-        end)
-    scale:SetPoint("TOPLEFT", 0, y - 2)
-    local scaleLabel = W.Text(page, 11, Theme.muted)
-    scaleLabel:SetPoint("LEFT", scale, "RIGHT", 10, 0)
-    scaleLabel:SetText("Tracker scale")
-    local resetPos = W.Button(page, "Reset position", 120, 22, function() ns.Tracker.ResetPosition() end)
-    resetPos:SetPoint("LEFT", scaleLabel, "RIGHT", 16, 0)
-    y = y - 40
 
-    heading(page, "Notifications", y)
-    y = y - 24
-    toggle("Summary in chat at login", "loginSummary")
-    toggle("Toast when today's target is reached", "targetToast")
-    toggle("Play a sound with the toast", "toastSound")
-    y = y - 16
-
-    heading(page, "Data", y)
-    local export = W.Button(page, "Export JSON", 120, 24, function() ns.ExportWindow.Open("export") end)
-    export:SetPoint("TOPLEFT", 0, y - 24)
-    local import = W.Button(page, "Import JSON", 120, 24, function() ns.ExportWindow.Open("import") end)
-    import:SetPoint("LEFT", export, "RIGHT", 8, 0)
-    local wipe
-    wipe = W.Button(page, "Reset this character", 160, 24, function()
-        if wipe.armed then
-            ns.ResetCharacter()
-            wipe.armed = false
-            wipe:SetLabel("Reset this character")
-        else
-            wipe.armed = true
-            wipe:SetLabel(Theme.Hex(Theme.bad) .. "Click again to confirm|r")
+    -- The whole row is the click target; the box sits on the right edge.
+    local function toggleRow(label, key, parentKey)
+        return function(row)
+            rowLabel(row, label)
+            local hit = CreateFrame("Button", nil, row)
+            hit:SetAllPoints()
+            local box = W.Panel(hit, Theme.bg)
+            box:SetSize(16, 16)
+            box:SetPoint("RIGHT", -ROW_PAD, 0)
+            local check = box:CreateTexture(nil, "OVERLAY")
+            check:SetPoint("TOPLEFT", 3, -3)
+            check:SetPoint("BOTTOMRIGHT", -3, 3)
+            check:SetColorTexture(unpack(Theme.accent))
+            hit:SetScript("OnClick", function() set(key, not settings[key]) end)
+            hit:SetScript("OnEnter", function() box:SetBackdropBorderColor(unpack(Theme.accent)) end)
+            hit:SetScript("OnLeave", function() box:SetBackdropBorderColor(unpack(Theme.border)) end)
+            row.control = hit
+            function row:Update()
+                check:SetShown(settings[key])
+            end
+            toggles[#toggles + 1] = row
+            if parentKey then
+                dependents[#dependents + 1] = { row, parentKey }
+            end
         end
-    end)
-    wipe:SetPoint("LEFT", import, "RIGHT", 8, 0)
+    end
+
+    local function controlRow(label, parentKey, makeControl)
+        return function(row)
+            rowLabel(row, label)
+            row.control = makeControl(row)
+            row.control:SetPoint("RIGHT", -ROW_PAD, 0)
+            if parentKey then
+                dependents[#dependents + 1] = { row, parentKey }
+            end
+        end
+    end
+
+    local scale
+    local y = settingsCard(page, "Tracker", 0, {
+        toggleRow("Show tracker", "showTracker"),
+        toggleRow("Lock position", "lockTracker", "showTracker"),
+        controlRow("Scale", "showTracker", function(row)
+            scale = W.Stepper(row, 110, W.Range(0.6, 1.61, 0.1), function(v) return string.format("%d%%", v * 100 + 0.5) end,
+                function() return settings.trackerScale end,
+                function(v) set("trackerScale", v) end)
+            return scale
+        end),
+        controlRow("Position", "showTracker", function(row)
+            return W.Button(row, "Reset", 110, 22, function() ns.Tracker.ResetPosition() end)
+        end),
+    })
+
+    y = settingsCard(page, "Notifications", y, {
+        toggleRow("Summary in chat at login", "loginSummary"),
+        toggleRow("Toast when today's target is reached", "targetToast"),
+        toggleRow("Sound with the toast", "toastSound", "targetToast"),
+    })
+
+    y = settingsCard(page, "Data", y, {
+        controlRow("JSON", nil, function(row)
+            local holder = CreateFrame("Frame", nil, row)
+            holder:SetSize(110 * 2 + 6, 22)
+            local import = W.Button(holder, "Import", 110, 22, function() ns.ExportWindow.Open("import") end)
+            import:SetPoint("RIGHT")
+            local export = W.Button(holder, "Export", 110, 22, function() ns.ExportWindow.Open("export") end)
+            export:SetPoint("RIGHT", import, "LEFT", -6, 0)
+            return holder
+        end),
+    })
+
+    -- Kept in its own card, away from the other buttons. The first click arms
+    -- it; it disarms by itself after a few seconds or when the page closes.
+    local wipe
+    local function disarm()
+        wipe.armed = false
+        wipe:SetLabel(Theme.Hex(Theme.bad) .. "Reset|r")
+    end
+    settingsCard(page, "Reset", y, {
+        controlRow("Reset " .. ns.char.name, nil, function(row)
+            wipe = W.Button(row, "", 110, 22, function()
+                if wipe.armed then
+                    disarm()
+                    ns.ResetCharacter()
+                else
+                    wipe.armed = true
+                    wipe:SetLabel(Theme.Hex(Theme.bad) .. "Confirm reset|r")
+                    local token = {}
+                    wipe.token = token
+                    C_Timer.After(4, function()
+                        if wipe.token == token and wipe.armed then
+                            disarm()
+                        end
+                    end)
+                end
+            end)
+            disarm()
+            return wipe
+        end),
+    }, { Theme.bad[1], Theme.bad[2], Theme.bad[3], 0.5 })
+    page:SetScript("OnHide", disarm)
 
     function page:Update()
-        for _, t in ipairs(toggles) do
-            t:Update()
+        for _, row in ipairs(toggles) do
+            row:Update()
         end
         scale:Update()
+        for _, entry in ipairs(dependents) do
+            setRowEnabled(entry[1], settings[entry[2]])
+        end
     end
 end
 
