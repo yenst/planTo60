@@ -195,12 +195,12 @@ end
 -- Goal --------------------------------------------------------------------
 
 local function summaryFor(draft)
-    local xph, measured = ns.XPPerHour()
+    local xph, measured = ns.XPPerHour(draft)
     return ns.Editors.Summary(ns.char, draft, xph, measured, true)
 end
 
 local function warningFor(draft)
-    return ns.Editors.Warning(ns.char, draft, ns.XPPerHour())
+    return ns.Editors.Warning(ns.char, draft, ns.XPPerHour(draft))
 end
 
 local function buildGoal(page)
@@ -221,18 +221,22 @@ local function buildGoal(page)
     deadlineHeading:SetPoint("TOPLEFT", 180, 0)
     page.deadline = ns.Editors.Deadline(page, page.draft, changed)
     page.deadline:SetPoint("TOPLEFT", 180, -22)
+    local playedHeading = heading(page, "/played to 60", 0)
+    playedHeading:SetPoint("TOPLEFT", 380, 0)
+    page.played = ns.Editors.Played(page, page.draft, changed)
+    page.played:SetPoint("TOPLEFT", 380, -22)
 
     heading(page, "Time you can play", -84)
     page.weekly = ns.Editors.Weekly(page, page.draft, changed, function()
-        return ns.Editors.Usage(ns.char, page.draft, ns.XPPerHour())
+        return ns.Editors.Usage(ns.char, page.draft, ns.XPPerHour(page.draft))
     end)
     page.weekly:SetPoint("TOPLEFT", 0, -106)
 
-    heading(page, "Plan style", -304)
+    heading(page, "Plan style", -324)
     page.mode = ns.Editors.Mode(page, page.draft, changed, function() return summaryFor(page.draft) end)
-    page.mode:SetPoint("TOPLEFT", 0, -326)
+    page.mode:SetPoint("TOPLEFT", 0, -346)
     page.summary = W.Text(page, 11)
-    page.summary:SetPoint("TOPLEFT", 0, -360)
+    page.summary:SetPoint("TOPLEFT", 0, -378)
     page.summary:SetWidth(CONTENT_W)
     page.summary:SetWordWrap(true)
     page.summary:SetSpacing(3)
@@ -248,6 +252,7 @@ local function buildGoal(page)
         self.level:Update()
         self.mode:Update()
         self.deadline:Update()
+        self.played:Update()
         self.weekly:Update()
         self.summary:SetText(warningFor(self.draft))
     end

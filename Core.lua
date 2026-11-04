@@ -55,17 +55,24 @@ end
 
 -- Public helpers used by the UI ------------------------------------------
 
--- XP/hour at your current level, and whether it's measured (false = guide estimate).
-function ns.XPPerHour()
-    return Pace.XPPerHour(ns.char.paceSamples, ns.char.level)
+-- XP/hour at your current level, and whether it's measured or set (false =
+-- guide estimate). `draft` (optional) previews its /played override instead.
+function ns.XPPerHour(draft)
+    local c = ns.char
+    local played = c.playedTo60
+    if draft then
+        played = draft.playedTo60
+    end
+    return Pace.XPPerHour(c.paceSamples, c.level, played)
 end
 
 function ns.StatusFor(c)
     if c == ns.char then
         return ns.status
     end
-    local status = Plan.Status(c, Day.Today(), Pace.XPPerHour(c.paceSamples or {}, c.level))
-    status.paceMeasured = Pace.Factor(c.paceSamples or {}) ~= nil
+    local xph, measured = Pace.XPPerHour(c.paceSamples or {}, c.level, c.playedTo60)
+    local status = Plan.Status(c, Day.Today(), xph)
+    status.paceMeasured = measured
     return status
 end
 
@@ -110,6 +117,7 @@ function ns.ApplyDraft(draft)
     for i = 1, 7 do
         c.schedule.weights[i] = draft.weights[i]
     end
+    c.playedTo60 = draft.playedTo60
     if not c.goal or c.goal.level ~= draft.level or c.goal.date ~= draft.date or Plan.Mode(c) ~= draft.mode then
         Plan.SetGoal(c, draft.level, draft.date, Day.Today(), draft.mode)
     end

@@ -142,12 +142,12 @@ for _ = 1, 4 do clickLabel(">") end -- +4 weeks
 shiftDown = false
 clickLabel(">") -- +1 day
 clickLabel("Next") -- goal -> time
--- Time step: click the Monday bar 3/4 of the way up = 6h; right-click Tuesday = off.
+-- Time step: click the Monday bar 1/4 of the way up = 6h of 24h; right-click Tuesday = off.
 local bars = {}
 for _, f in ipairs(allFrames) do
     if f.kind == "Button" and rawget(f, "index") and visible(f) then bars[#bars + 1] = f end
 end
-cursorY = 100 + 96 * 0.75
+cursorY = 100 + 120 * 0.25
 bars[1]:Fire("OnClick", "LeftButton")
 bars[2]:Fire("OnClick", "RightButton")
 bars[3]:Fire("OnMouseWheel", 1)
@@ -170,6 +170,17 @@ ns.Planner.Show("goal")
 clickLabel("Evenings + weekend")
 clickLabel(">")
 assert(ns.char.schedule.weights[3] == 1, "goal page preset applied")
+-- A faster /played means the goal needs fewer hours.
+local played = ns.Editors.DraftFrom(ns.char)
+played.playedTo60 = 300
+assert(ns.ApplyDraft(played))
+local slowNeed = ns.status.hoursNeeded
+played.playedTo60 = 48
+assert(ns.ApplyDraft(played))
+assert(ns.char.playedTo60 == 48 and ns.status.hoursNeeded < slowNeed, "/played override applied")
+played.playedTo60 = nil
+assert(ns.ApplyDraft(played))
+assert(ns.char.playedTo60 == nil, "/played back to auto")
 ns.ExportWindow.Open("export")
 assert(_G.pt60Export.shown)
 ns.ExportWindow.Open("import")

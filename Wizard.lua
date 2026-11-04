@@ -25,7 +25,7 @@ local function paragraph(parent, text, y, color)
 end
 
 local function usage()
-    return ns.Editors.Usage(ns.char, draft, ns.XPPerHour())
+    return ns.Editors.Usage(ns.char, draft, ns.XPPerHour(draft))
 end
 
 local function heading(parent, text)
@@ -41,7 +41,7 @@ local MODE_INFO = {
 }
 
 local function warning()
-    return ns.Editors.Warning(ns.char, draft, ns.XPPerHour())
+    return ns.Editors.Warning(ns.char, draft, ns.XPPerHour(draft))
 end
 
 local function label(parent, text, y)
@@ -91,10 +91,14 @@ local STEPS = {
             heading(page, "How much can you play?")
             page.weekly = ns.Editors.Weekly(page, draft, function() Wizard.Update() end, usage)
             page.weekly:SetPoint("TOPLEFT", 0, -36)
-            page.warning = paragraph(page, "", -224)
+            label(page, "/played to 60", -250)
+            page.played = ns.Editors.Played(page, draft, function() Wizard.Update() end)
+            page.played:SetPoint("TOPLEFT", 0, -268)
+            page.warning = paragraph(page, "", -302)
         end,
         update = function(page)
             page.weekly:Update()
+            page.played:Update()
             page.warning:SetText(warning())
         end,
     },

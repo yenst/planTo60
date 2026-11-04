@@ -291,6 +291,17 @@ test("pace: guide estimate first, then your factor at any level", function()
     eq(#samples, 13)
 end)
 
+test("pace: a /played override replaces the measured pace", function()
+    local Curve, XP = ns.Curve, ns.XP
+    local guideHours = Curve.Hours(0, XP.Cum(XP.MAX_LEVEL))
+    -- Claiming half the guide's /played means twice the guide rate, even with no samples.
+    local xph, measured = Pace.XPPerHour({}, 40, guideHours / 2)
+    eq(measured, true)
+    assert(math.abs(xph - Curve.Rate(40) * 2) < 1e-6, "twice the guide rate")
+    -- The whole 1-60 run then takes exactly the stated hours.
+    assert(math.abs(guideHours / Pace.FactorFromPlayed(96) - 96) < 1e-9, "96h to 60")
+end)
+
 test("JSON round-trips values and escapes strings", function()
     local value = { a = 1, b = "x\"y\n", c = JSON.Array({ true, false, 1.5 }), d = JSON.Array(), e = {} }
     local text = JSON.Encode(value)

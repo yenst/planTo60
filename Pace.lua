@@ -10,7 +10,7 @@ local _, ns = ...
 local Pace = {}
 ns.Pace = Pace
 
-local Curve = ns.Curve
+local Curve, XP = ns.Curve, ns.XP
 
 local MAX_MINUTES = 300 -- 5 hours of active play
 local MIN_MINUTES = 10
@@ -51,8 +51,14 @@ function Pace.Factor(samples)
     return sum / #samples
 end
 
--- XP/hour at `level`, and whether it is measured (false = guide estimate).
-function Pace.XPPerHour(samples, level)
-    local factor = Pace.Factor(samples)
+-- Factor for someone whose /played from 1 to max level is `hours`.
+function Pace.FactorFromPlayed(hours)
+    return Curve.Hours(0, XP.Cum(XP.MAX_LEVEL)) / hours
+end
+
+-- XP/hour at `level`, and whether it is measured or set (false = guide
+-- estimate). `playedHours` (optional) overrides the measured pace.
+function Pace.XPPerHour(samples, level, playedHours)
+    local factor = playedHours and Pace.FactorFromPlayed(playedHours) or Pace.Factor(samples)
     return (factor or 1) * Curve.Rate(level), factor ~= nil
 end

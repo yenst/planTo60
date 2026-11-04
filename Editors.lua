@@ -9,7 +9,7 @@ local Editors = {}
 ns.Editors = Editors
 
 local DAY = ns.DAY
-local MAX_HOURS = 8
+local MAX_HOURS = 24
 local HOUR_STEP = 0.5
 local WEEK_ORDER = { 2, 3, 4, 5, 6, 7, 1 } -- Monday first; weights[] is Sunday first
 local PRESETS = {
@@ -29,6 +29,7 @@ function Editors.DraftFrom(c)
         date = goal and goal.date or Day.Key(Day.Today() + 30 * DAY),
         mode = goal and Plan.Mode(ns.char) or "time",
         weights = weights,
+        playedTo60 = c.playedTo60,
     }
 end
 
@@ -225,10 +226,11 @@ function Editors.Deadline(parent, draft, onChange)
     return frame
 end
 
--- Weekly hours as bars: the grey bar is the time you can play that weekday,
--- the filled part is how much of it the plan needs (red when it needs more
--- than you set aside). Click a bar to set its height, scroll for +/- 30m,
--- right-click for a day off. `getUsage` returns the current share or nil.
+-- Weekly hours as bars on a fixed 0-24h scale: each bar is the time you can
+-- play that weekday, so changing one leaves the others as they are. Bars turn
+-- red when the goal needs more than you set aside. Click a bar to set its
+-- height, scroll for +/- 30m, right-click for a day off. `getUsage` returns
+-- the current share or nil.
 local function hoursLabel(hours)
     if hours == 0 then
         return "off"
@@ -243,10 +245,10 @@ local function snap(hours)
 end
 
 function Editors.Weekly(parent, draft, onChange, getUsage)
-    local WIDTH, BAR_H, BAR_W = 520, 96, 30
+    local WIDTH, BAR_H, BAR_W = 520, 120, 30
     local colW = WIDTH / 7
     local frame = CreateFrame("Frame", nil, parent)
-    frame:SetSize(WIDTH, 176)
+    frame:SetSize(WIDTH, 200)
 
     local need = W.Text(frame, 12)
     need:SetPoint("TOPLEFT")
@@ -268,13 +270,9 @@ function Editors.Weekly(parent, draft, onChange, getUsage)
         track:SetColorTexture(0, 0, 0, 0.45)
         track:SetPoint("BOTTOM")
         track:SetSize(BAR_W, BAR_H)
-        col.available = col:CreateTexture(nil, "BORDER")
-        col.available:SetColorTexture(unpack(Theme.bgHover))
+        col.available = col:CreateTexture(nil, "ARTWORK")
         col.available:SetPoint("BOTTOM")
         col.available:SetWidth(BAR_W)
-        col.needed = col:CreateTexture(nil, "ARTWORK")
-        col.needed:SetPoint("BOTTOM")
-        col.needed:SetWidth(BAR_W)
 
         col.day = W.Text(frame, 11, Theme.muted, "CENTER")
         col.day:SetPoint("TOP", col, "BOTTOM", 0, -4)
@@ -332,16 +330,29 @@ function Editors.Weekly(parent, draft, onChange, getUsage)
         need:SetText(usage and Editors.NeedLine(usage, draft.weights) or "")
         for _, col in ipairs(columns) do
             local hours = draft.weights[col.index]
-            local barHeight = hours / MAX_HOURS * BAR_H
-            col.available:SetHeight(math.max(1, barHeight))
+            col.available:SetHeight(math.max(1, hours / MAX_HOURS * BAR_H))
             col.available:SetShown(hours > 0)
-            local fill = usage and math.min(usage, 1) or 0
-            col.needed:SetHeight(math.max(1, barHeight * fill))
-            col.needed:SetShown(hours > 0 and fill > 0)
-            col.needed:SetColorTexture(unpack(usageColor(usage or 0)))
+            col.available:SetColorTexture(unpack(usageColor(usage or 0)))
             col.value:SetText(hoursLabel(hours))
             col.value:SetTextColor(unpack(hours > 0 and Theme.text or Theme.muted))
         end
     end
     return frame
+end
+
+-- Your /played from 1 to max level, to plan with instead of the measured pace.
+-- The first value is "Auto": the measured pace, or the guide until there is one.
+function Editors.Played(parent, draft, onChange)
+    local values = { 0 }
+    for h = 24, 300, 4 do
+        values[#values + 1] = h
+    end
+    return W.Stepper(parent, 130, values, function(v)
+        return v == 0 and "Auto" or (v .. "h")
+    end, function()
+        return draft.playedTo60 or 0
+    end, function(v)
+        draft.playedTo60 = v > 0 and v or nil
+        onChange()
+    end)
 end
