@@ -1,0 +1,11 @@
+# CurseForge / BigWigs packager config: the zip contains one folder, planTo60/,
+# with the .toc and Lua files only.
+package-as: planTo60
+
+ignore:
+  - tests
+  - tools
+  - README.md
+  - CHANGELOG.md
+
+enable-nolib-creation: no

@@ -1,0 +1,32 @@
+## Interface: 16001, 11509
+## Title: |cff1fd1a0planTo60|r
+## Notes: Plan your leveling: set a target level and a deadline, get a daily XP goal that recalculates itself.
+## Author: yenst
+## Version: @project-version@
+## X-License: MIT
+## X-Website: https://github.com/yenst/planTo60
+## IconTexture: Interface\Icons\INV_Misc_PocketWatch_01
+## SavedVariables: pt60DB
+## OptionalDeps: EllesmereUI, LibDataBroker-1.1
+
+Init.lua
+XPTable.lua
+Curve.lua
+Day.lua
+JSON.lua
+Plan.lua
+Pace.lua
+Quests.lua
+Export.lua
+Theme.lua
+Widgets.lua
+Tracker.lua
+Toast.lua
+Editors.lua
+Calendar.lua
+Chart.lua
+Planner.lua
+Wizard.lua
+ExportWindow.lua
+Broker.lua
+Core.lua

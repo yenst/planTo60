@@ -1,0 +1,30 @@
+# Push a tag like v1.0.0 to build the addon zip and publish it to the GitHub
+# release and (once CF_API_KEY and X-Curse-Project-ID are set) CurseForge.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run tests
+        run: |
+          sudo apt-get install -y lua5.1 >/dev/null
+          lua5.1 tests/run.lua
+          lua5.1 tests/smoke.lua
+
+      - name: Package and upload
+        uses: BigWigsMods/packager@v2
