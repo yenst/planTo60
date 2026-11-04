@@ -144,8 +144,8 @@ function Editors.Level(parent, draft, onChange)
     end)
 end
 
--- "Same time every day" (default) vs "Same XP every day". `describe`
--- (optional) returns text for the buttons' tooltip, one line per "\n".
+-- "Same time every day" (default) vs "Same XP every day". `describe(mode)`
+-- (optional) returns text for that button's tooltip, one line per "\n".
 function Editors.Mode(parent, draft, onChange, describe)
     local frame = CreateFrame("Frame", nil, parent)
     frame:SetSize(400, 22)
@@ -159,7 +159,7 @@ function Editors.Mode(parent, draft, onChange, describe)
         button:SetPoint("LEFT", (i - 1) * 168, 0)
         if describe then
             W.Tooltip(button, function(tip)
-                for line in describe():gmatch("[^\n]+") do
+                for line in describe(option[1]):gmatch("[^\n]+") do
                     tip:AddLine(line, 1, 1, 1, true)
                 end
             end)

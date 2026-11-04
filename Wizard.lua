@@ -35,9 +35,19 @@ local function heading(parent, text)
     return fs
 end
 
-local function summaryText(parent, y)
-    local fs = paragraph(parent, "", y)
-    W.SetFont(fs, 11)
+local MODE_INFO = {
+    time = "Same time every day (recommended)\nTargets start lower and grow as you level; each day takes about the same share of your time.",
+    xp = "Same XP every day\nOne fixed XP number per day. Early days take much longer than late ones.",
+}
+
+local function warning()
+    return ns.Editors.Warning(ns.char, draft, ns.XPPerHour())
+end
+
+local function label(parent, text, y)
+    local fs = W.Text(parent, 11, Theme.muted)
+    fs:SetPoint("TOPLEFT", 0, y)
+    fs:SetText(text)
     return fs
 end
 
@@ -46,37 +56,31 @@ local STEPS = {
         title = "Welcome",
         build = function(page)
             heading(page, "Plan your leveling")
+            label(page, "Set a goal, a deadline and your play time.", -32)
             local logo = page:CreateTexture(nil, "ARTWORK")
             logo:SetTexture(ns.LOGO)
-            logo:SetSize(110, 110)
-            logo:SetPoint("TOP", 0, -150)
-            page.intro = paragraph(page, "", -32)
-            paragraph(page, "Pick a target level and a deadline, then tell planTo60 how much you play on each day of the week. "
-                .. "It works out how much XP you need every day and recalculates after each daily reset: a missed day is "
-                .. "spread over the days that remain, and getting ahead makes later days lighter.", -78, Theme.muted)
+            logo:SetSize(150, 150)
+            logo:SetPoint("CENTER", 0, -20)
         end,
-        update = function(page)
-            local c = ns.char
-            page.intro:SetText(string.format("%s is level %d with %s XP into the level.", c.name, c.level, ns.FormatXP(c.xp)))
-        end,
+        update = function() end,
     },
     {
         title = "Goal",
         validate = true,
         build = function(page)
             heading(page, "What's the goal?")
-            paragraph(page, "Target level", -36, Theme.muted)
+            label(page, "Target level", -40)
             page.level = ns.Editors.Level(page, draft, function() Wizard.Update() end)
-            page.level:SetPoint("TOPLEFT", 0, -56)
-            paragraph(page, "Reach it by (the deadline day counts as a play day)", -96, Theme.muted)
+            page.level:SetPoint("TOPLEFT", 0, -58)
+            label(page, "Deadline", -100)
             page.deadline = ns.Editors.Deadline(page, draft, function() Wizard.Update() end)
-            page.deadline:SetPoint("TOPLEFT", 0, -116)
-            page.summary = summaryText(page, -180)
+            page.deadline:SetPoint("TOPLEFT", 0, -118)
+            page.warning = paragraph(page, "", -160)
         end,
         update = function(page)
             page.level:Update()
             page.deadline:Update()
-            page.summary:SetText(ns.Editors.Summary(ns.char, draft, ns.XPPerHour()))
+            page.warning:SetText(warning())
         end,
     },
     {
@@ -84,16 +88,13 @@ local STEPS = {
         validate = true,
         build = function(page)
             heading(page, "How much can you play?")
-            paragraph(page, "Set the hours you can play on each weekday. The filled part of each bar is what "
-                .. "your goal needs. Single days can be marked off later in the calendar.", -32, Theme.muted)
             page.weekly = ns.Editors.Weekly(page, draft, function() Wizard.Update() end, usage)
-            page.weekly:SetPoint("TOPLEFT", 0, -76)
-            page.summary = summaryText(page, -266)
+            page.weekly:SetPoint("TOPLEFT", 0, -36)
+            page.warning = paragraph(page, "", -224)
         end,
         update = function(page)
             page.weekly:Update()
-            local xph, measured = ns.XPPerHour()
-            page.summary:SetText(ns.Editors.Summary(ns.char, draft, xph, measured, true))
+            page.warning:SetText(warning())
         end,
     },
     {
@@ -101,17 +102,13 @@ local STEPS = {
         validate = true,
         build = function(page)
             heading(page, "How should days be planned?")
-            page.mode = ns.Editors.Mode(page, draft, function() Wizard.Update() end)
-            page.mode:SetPoint("TOPLEFT", 0, -36)
-            paragraph(page, Theme.Hex(Theme.accent) .. "Same time every day|r (recommended): XP comes faster at "
-                .. "higher levels, so targets start lower and grow as you level while each day takes about the same "
-                .. "share of your time.\n\n" .. Theme.Hex(Theme.accent) .. "Same XP every day|r: one fixed XP "
-                .. "number. Early days take noticeably longer than late ones.", -72, Theme.muted)
-            page.summary = summaryText(page, -190)
+            page.mode = ns.Editors.Mode(page, draft, function() Wizard.Update() end, function(key) return MODE_INFO[key] end)
+            page.mode:SetPoint("TOPLEFT", 0, -40)
+            page.warning = paragraph(page, "", -80)
         end,
         update = function(page)
             page.mode:Update()
-            page.summary:SetText(ns.Editors.Summary(ns.char, draft, ns.XPPerHour()))
+            page.warning:SetText(warning())
         end,
     },
     {
@@ -119,10 +116,8 @@ local STEPS = {
         build = function(page)
             local settings = ns.db.settings
             heading(page, "Keeping track")
-            paragraph(page, "A small tracker shows today's progress. Drag it to move it, right-click to lock it. "
-                .. "With EllesmereUI installed it also shows up in EllesmereUI's unlock mode.", -32, Theme.muted)
             page.toggles = {}
-            local y = -90
+            local y = -40
             for _, entry in ipairs({
                 { "Show the tracker", "showTracker" },
                 { "Summary in chat at login", "loginSummary" },
@@ -147,14 +142,14 @@ local STEPS = {
         title = "Review",
         build = function(page)
             heading(page, "Ready")
-            page.goal = paragraph(page, "", -34)
-            page.summary = summaryText(page, -60)
-            paragraph(page, "Open the planner any time with /pt60 or by clicking the tracker.", -140, Theme.muted)
+            page.goal = paragraph(page, "", -36)
+            page.need = paragraph(page, "", -58)
+            label(page, "/pt60 opens the planner", -96)
         end,
         update = function(page)
-            local start = Day.StartOfKey(draft.date)
-            page.goal:SetText(string.format("Level %d by %s.", draft.level, Day.Pretty(start)))
-            page.summary:SetText(ns.Editors.Summary(ns.char, draft, ns.XPPerHour()))
+            page.goal:SetText(string.format("Level %d by %s", draft.level, Day.Pretty(Day.StartOfKey(draft.date))))
+            local share = usage()
+            page.need:SetText(share and ns.Editors.NeedLine(share, draft.weights) or warning())
         end,
     },
 }
