@@ -5,7 +5,7 @@
 ## Version: @project-version@
 ## X-License: MIT
 ## X-Website: https://github.com/yenst/planTo60
-## IconTexture: Interface\Icons\INV_Misc_PocketWatch_01
+## IconTexture: Interface\AddOns\planTo60\Media\icon
 ## SavedVariables: pt60DB
 ## OptionalDeps: EllesmereUI, LibDataBroker-1.1
 

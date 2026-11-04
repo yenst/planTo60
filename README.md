@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/planto60-curseforge.png" width="128" alt="planTo60 logo"></p>
+
 # planTo60
 
 A leveling planner for WoW Forever and Classic Era. Set a target level, a deadline and the hours you can play; planTo60 gives you a daily XP target and recalculates it after every daily reset. Slash command: `/pt60`.

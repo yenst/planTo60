@@ -46,6 +46,10 @@ local STEPS = {
         title = "Welcome",
         build = function(page)
             heading(page, "Plan your leveling")
+            local logo = page:CreateTexture(nil, "ARTWORK")
+            logo:SetTexture(ns.LOGO)
+            logo:SetSize(110, 110)
+            logo:SetPoint("TOP", 0, -150)
             page.intro = paragraph(page, "", -32)
             paragraph(page, "Pick a target level and a deadline, then tell planTo60 how much you play on each day of the week. "
                 .. "It works out how much XP you need every day and recalculates after each daily reset: a missed day is "

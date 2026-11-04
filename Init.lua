@@ -2,6 +2,8 @@ local ADDON, ns = ...
 
 ns.name = ADDON
 ns.TITLE = "planTo60"
+ns.ICON = "Interface\\AddOns\\" .. ADDON .. "\\Media\\icon" -- 64x64
+ns.LOGO = "Interface\\AddOns\\" .. ADDON .. "\\Media\\logo" -- 256x256
 ns.DAY = 86400
 
 local listeners = {}
@@ -18,7 +20,7 @@ function ns.Refresh()
 end
 
 function ns.Print(msg)
-    DEFAULT_CHAT_FRAME:AddMessage("|cff1fd1a0" .. ns.TITLE .. "|r " .. msg)
+    DEFAULT_CHAT_FRAME:AddMessage("|T" .. ns.ICON .. ":14:14|t |cff1fd1a0" .. ns.TITLE .. "|r " .. msg)
 end
 
 -- 58000 -> "58.0k", 1234567 -> "1.23M"

@@ -30,7 +30,7 @@ function Broker.Build()
         type = "data source",
         label = ns.TITLE,
         text = ns.TITLE,
-        icon = "Interface\\Icons\\INV_Misc_PocketWatch_01",
+        icon = ns.ICON,
         OnClick = function(_, button)
             if button == "RightButton" then
                 ns.db.settings.showTracker = not ns.db.settings.showTracker

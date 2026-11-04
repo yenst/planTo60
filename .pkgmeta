@@ -5,6 +5,7 @@ package-as: planTo60
 ignore:
   - tests
   - tools
+  - assets
   - README.md
   - CHANGELOG.md
 
