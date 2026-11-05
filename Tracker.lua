@@ -71,7 +71,8 @@ end
 local FILL_FROM, FILL_TO = { 0.39, 0.39, 1 }, { 0.78, 0.39, 1 }
 local QUEST_COLOR = { 1, 0.65, 0 }
 local RESTED_COLOR = { 0.35, 0.62, 1 }
-local BAR_W, BAR_H, PCT_W = 430, 24, 110
+-- The thin bar on top shows progress through the current level.
+local BAR_W, BAR_H, LEVEL_H, LEVEL_GAP = 540, 24, 8, 2
 
 local function setGradient(texture, from, to)
     texture:SetTexture(W.FLAT)
@@ -100,15 +101,26 @@ end
 
 function Tracker.Build()
     frame = CreateFrame("Button", "pt60Tracker", UIParent)
-    frame:SetSize(BAR_W + PCT_W, BAR_H + 22)
+    frame:SetSize(BAR_W, LEVEL_H + LEVEL_GAP + BAR_H + 22)
     frame:SetFrameStrata("MEDIUM")
     frame:SetClampedToScreen(true)
     frame:SetMovable(true)
     frame:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     frame:RegisterForDrag("LeftButton")
 
+    local levelBar = W.Panel(frame, { 0.06, 0.07, 0.10, 0.85 })
+    levelBar:SetPoint("TOPLEFT")
+    levelBar:SetSize(BAR_W, LEVEL_H)
+    local levelInner = CreateFrame("Frame", nil, levelBar)
+    levelInner:SetPoint("TOPLEFT", 1, -1)
+    levelInner:SetPoint("BOTTOMRIGHT", -1, 1)
+    frame.levelFill = segment(levelInner, "BORDER")
+    frame.levelFill:SetPoint("LEFT")
+    setGradient(frame.levelFill, FILL_FROM, FILL_TO)
+    frame.levelInner = levelInner
+
     local bar = W.Panel(frame, { 0.06, 0.07, 0.10, 0.85 })
-    bar:SetPoint("TOPLEFT")
+    bar:SetPoint("TOPLEFT", levelBar, "BOTTOMLEFT", 0, -LEVEL_GAP)
     bar:SetSize(BAR_W, BAR_H)
     local inner = CreateFrame("Frame", nil, bar)
     inner:SetPoint("TOPLEFT", 1, -1)
@@ -127,16 +139,12 @@ function Tracker.Build()
     frame.levelText = outlined(inner, 14)
     frame.levelText:SetPoint("LEFT", 8, 0)
     frame.xpText = outlined(inner, 14, Theme.text, "CENTER")
-    frame.xpText:SetPoint("CENTER", 20, 0)
-
-    local pct = W.Panel(frame, { 0.03, 0.04, 0.06, 0.9 })
-    pct:SetPoint("TOPLEFT", bar, "TOPRIGHT", -1, 0)
-    pct:SetSize(PCT_W, BAR_H)
-    frame.pctText = outlined(pct, 14, Theme.text, "CENTER")
-    frame.pctText:SetPoint("CENTER")
+    frame.xpText:SetPoint("CENTER")
+    frame.pctText = outlined(inner, 14, Theme.text, "RIGHT")
+    frame.pctText:SetPoint("RIGHT", -8, 0)
 
     frame.sub = outlined(frame, 12, Theme.text, "CENTER")
-    frame.sub:SetPoint("TOP", bar, "BOTTOM", PCT_W / 2, -5)
+    frame.sub:SetPoint("TOP", bar, "BOTTOM", 0, -5)
 
     frame:SetScript("OnDragStart", function(self)
         if not settings().lockTracker then
@@ -226,6 +234,14 @@ local function subText(s, rested)
     return table.concat(parts, "     ")
 end
 
+-- Thin top bar: XP through the current level (empty at max level).
+local function setLevelProgress()
+    local max = UnitXPMax("player")
+    local part = max > 0 and math.max(0, math.min(1, UnitXP("player") / max)) or 0
+    frame.levelFill:SetWidth(math.max(0.01, frame.levelInner:GetWidth() * part))
+    frame.levelFill:SetShown(part > 0)
+end
+
 local function showEmpty(level, center, right, sub)
     frame.levelText:SetText("Level " .. level)
     frame.xpText:SetText(center)
@@ -240,6 +256,7 @@ function Tracker.Update()
     end
     frame:SetShown(settings().showTracker)
     frame:SetScale(settings().trackerScale)
+    setLevelProgress()
     local s = ns.status
     local level = ns.char.level
     if not s then
