@@ -3,7 +3,8 @@ local _, ns = ...
 local Theme, W, Day, Plan, XP = ns.Theme, ns.W, ns.Day, ns.Plan, ns.XP
 
 -- Plan-vs-actual line chart of total XP over the goal's lifetime, with
--- horizontal gridlines at level boundaries.
+-- horizontal gridlines at level boundaries. The plan line follows the goal's
+-- mode: even XP per day (straight) or even hours per day (curved).
 local Chart = {}
 ns.Chart = Chart
 
@@ -33,7 +34,7 @@ local function timeRange(c, today)
     return first, math.max(Plan.Deadline(c), today)
 end
 
--- Planned end-of-day totals, walking cumulative weights once.
+-- Planned end-of-day totals in the goal's mode, walking cumulative weights once.
 local function baselineSeries(c, first, last, step)
     local created = Day.StartOfKey(c.goal.createdDay)
     local deadline = Plan.Deadline(c)
@@ -44,7 +45,10 @@ local function baselineSeries(c, first, last, step)
     for d = created, math.min(deadline, last), DAY do
         cumulative = cumulative + Plan.Weight(c, d)
         if i % step == 0 or d == deadline then
-            local total = planWeight > 0 and c.goal.createdTotal + (goalTotal - c.goal.createdTotal) * cumulative / planWeight or goalTotal
+            local total = goalTotal
+            if planWeight > 0 and d < deadline then
+                total = math.min(goalTotal, Plan.BaselineAfter(c, cumulative))
+            end
             points[#points + 1] = { d, total }
         end
         i = i + 1

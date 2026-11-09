@@ -220,7 +220,13 @@ function Plan.BaselineEnd(c, start)
     if start >= deadline or Plan.SumWeights(c, created, deadline) == 0 then
         return goalTotal
     end
-    return mode(c).Advance(g.createdTotal, baselineUnit(c) * Plan.SumWeights(c, created, start))
+    return Plan.BaselineAfter(c, Plan.SumWeights(c, created, start))
+end
+
+-- Planned total once `weight` worth of play days have passed since the goal
+-- was set, following the goal's mode (even hours or even XP per day).
+function Plan.BaselineAfter(c, weight)
+    return mode(c).Advance(c.goal.createdTotal, baselineUnit(c) * weight)
 end
 
 -- Guide hours of play per weight-1 day over the last `count` logged play
