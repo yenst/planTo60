@@ -267,6 +267,14 @@ ns.Planner.Show("goal")
 ns.Planner.Show("characters")
 print("tracker:", _G.pt60Tracker.levelText.text, "|", _G.pt60Tracker.xpText.text, "|", _G.pt60Tracker.pctText.text)
 print("tracker sub:", (_G.pt60Tracker.sub.text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")))
+-- Swapped bars: the main bar shows the current level, the thin bar today's target.
+ns.db.settings.levelMainBar = true
+ns.Refresh()
+assert(_G.pt60Tracker.xpText.text == UnitXP("player") .. " / " .. UnitXPMax("player"), "main bar shows level XP when swapped")
+print("swapped:", _G.pt60Tracker.xpText.text, "|", _G.pt60Tracker.pctText.text)
+print("swapped sub:", (_G.pt60Tracker.sub.text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")))
+ns.db.settings.levelMainBar = false
+ns.Refresh()
 -- The export box holds the JSON the player copies.
 ns.ExportWindow.Open("export")
 local doc = assert(ns.JSON.Decode(_G.pt60Export.edit:GetText()))

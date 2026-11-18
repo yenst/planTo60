@@ -6,6 +6,7 @@ local DEFAULT_SETTINGS = {
     showTracker = true,
     lockTracker = false,
     trackerScale = 1,
+    levelMainBar = false,
     loginSummary = true,
     targetToast = true,
     toastSound = true,

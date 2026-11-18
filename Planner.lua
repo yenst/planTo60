@@ -372,7 +372,7 @@ end
 
 -- Settings ----------------------------------------------------------------
 
-local ROW_H = 30
+local ROW_H = 28
 local ROW_PAD = 12
 
 -- One card per section: rows with the label on the left and the control on
@@ -396,7 +396,7 @@ local function settingsCard(page, title, y, rows, border)
         end
         build(row)
     end
-    return y - 20 - #rows * ROW_H - 18
+    return y - 20 - #rows * ROW_H - 14
 end
 
 local function rowLabel(row, text)
@@ -475,6 +475,7 @@ local function buildSettings(page)
     local y = settingsCard(page, "Tracker", 0, {
         toggleRow("Show tracker", "showTracker"),
         toggleRow("Lock position", "lockTracker", "showTracker"),
+        toggleRow("Character level as main bar", "levelMainBar", "showTracker"),
         controlRow("Scale", "showTracker", function(row)
             scale = W.Stepper(row, 110, W.Range(0.6, 1.61, 0.1), function(v) return string.format("%d%%", v * 100 + 0.5) end,
                 function() return settings.trackerScale end,

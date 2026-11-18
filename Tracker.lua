@@ -71,7 +71,8 @@ end
 local FILL_FROM, FILL_TO = { 0.39, 0.39, 1 }, { 0.78, 0.39, 1 }
 local QUEST_COLOR = { 1, 0.65, 0 }
 local RESTED_COLOR = { 0.35, 0.62, 1 }
--- The thin bar on top shows progress through the current level.
+-- The thin bar on top shows progress through the current level (or today's
+-- target when the bars are swapped).
 local BAR_W, BAR_H, LEVEL_H, LEVEL_GAP = 540, 24, 8, 2
 
 local function setGradient(texture, from, to)
@@ -234,12 +235,20 @@ local function subText(s, rested)
     return table.concat(parts, "     ")
 end
 
--- Thin top bar: XP through the current level (empty at max level).
-local function setLevelProgress()
-    local max = UnitXPMax("player")
-    local part = max > 0 and math.max(0, math.min(1, UnitXP("player") / max)) or 0
-    frame.levelFill:SetWidth(math.max(0.01, frame.levelInner:GetWidth() * part))
-    frame.levelFill:SetShown(part > 0)
+local function clamp01(v)
+    return math.max(0, math.min(1, v))
+end
+
+-- Fill a bar's single texture to a fraction of its width.
+local function setFill(texture, inner, part)
+    texture:SetWidth(math.max(0.01, inner:GetWidth() * part))
+    texture:SetShown(part > 0)
+end
+
+-- XP through the current level as a fraction (0 at max level).
+local function levelProgress()
+    local cur, max = UnitXP("player"), UnitXPMax("player")
+    return cur, max, max > 0 and clamp01(cur / max) or 0
 end
 
 local function showEmpty(level, center, right, sub)
@@ -250,32 +259,58 @@ local function showEmpty(level, center, right, sub)
     setSegments(0, 0, 0)
 end
 
+-- Swapped layout: the main bar shows the current level (with finished quests
+-- and rested XP on top), the thin bar shows today's target.
+local function showLevelMain(level, daily, s)
+    local cur, max, part = levelProgress()
+    setFill(frame.levelFill, frame.levelInner, daily)
+    frame.levelText:SetText("Level " .. level)
+    if max > 0 then
+        frame.xpText:SetText(cur .. " / " .. max)
+        frame.pctText:SetText(percent(part))
+        setSegments(part, ns.Quests.banked.xp / max, (ns.restedXP or 0) / max)
+    else
+        frame.xpText:SetText("")
+        frame.pctText:SetText("")
+        setSegments(0, 0, 0)
+    end
+    if s then
+        frame.sub:SetText("Today " .. percent(daily) .. "     " .. frame.sub:GetText())
+    end
+end
+
 function Tracker.Update()
     if not frame then
         return
     end
     frame:SetShown(settings().showTracker)
     frame:SetScale(settings().trackerScale)
-    setLevelProgress()
     local s = ns.status
     local level = ns.char.level
+    local daily, active = 0, false
     if not s then
         showEmpty(level, "No goal yet", "Set up", "Click to plan your leveling")
-        return
     elseif s.state == "done" then
         showEmpty(level, "Goal reached", "100%", Theme.Hex(Theme.accent) .. "Level " .. s.goalLevel .. " reached. Congratulations!|r")
         setSegments(1, 0, 0)
-        return
+        daily = 1
     elseif s.offToday then
         showEmpty(level, s.gained .. " XP", "Rest day", Theme.Hex(Theme.muted) .. "Rest day - no target today|r")
-        return
+    else
+        local rested = math.min(ns.restedXP or 0, s.leftAfterBanked)
+        frame.levelText:SetText("Level " .. level)
+        frame.xpText:SetText(s.gained .. " / " .. s.target)
+        local withQuests = s.banked > 0 and string.format(" (%s)", percent((s.gained + s.banked) / s.target)) or ""
+        frame.pctText:SetText(percent(s.gained / s.target) .. withQuests)
+        setSegments(s.gained / s.target, s.banked / s.target, rested / s.target)
+        frame.sub:SetText(subText(s, rested))
+        daily, active = clamp01(s.gained / s.target), true
     end
 
-    local rested = math.min(ns.restedXP or 0, s.leftAfterBanked)
-    frame.levelText:SetText("Level " .. level)
-    frame.xpText:SetText(s.gained .. " / " .. s.target)
-    local withQuests = s.banked > 0 and string.format(" (%s)", percent((s.gained + s.banked) / s.target)) or ""
-    frame.pctText:SetText(percent(s.gained / s.target) .. withQuests)
-    setSegments(s.gained / s.target, s.banked / s.target, rested / s.target)
-    frame.sub:SetText(subText(s, rested))
+    if settings().levelMainBar then
+        showLevelMain(level, daily, active and s)
+    else
+        local _, _, part = levelProgress()
+        setFill(frame.levelFill, frame.levelInner, part)
+    end
 end
