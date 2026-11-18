@@ -486,6 +486,12 @@ local function buildSettings(page)
         end),
     })
 
+    if ns.Broker.HasMinimapButton() then
+        y = settingsCard(page, "Minimap", y, {
+            toggleRow("Show minimap button", "minimapButton"),
+        })
+    end
+
     y = settingsCard(page, "Notifications", y, {
         toggleRow("Summary in chat at login", "loginSummary"),
         toggleRow("Toast when today's target is reached", "targetToast"),

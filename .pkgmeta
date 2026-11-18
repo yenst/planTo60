@@ -1,6 +1,13 @@
 # CurseForge / BigWigs packager config: the zip contains one folder, planTo60/,
-# with the .toc and Lua files only.
+# with the .toc, Lua files, Media and the embedded Libs/.
 package-as: planTo60
+
+# Embedded for the minimap button and the LDB feed.
+externals:
+  Libs/LibStub: https://repos.curseforge.com/wow/libstub/trunk
+  Libs/CallbackHandler-1.0: https://repos.curseforge.com/wow/callbackhandler/trunk/CallbackHandler-1.0
+  Libs/LibDataBroker-1.1: https://github.com/tekkub/libdatabroker-1-1
+  Libs/LibDBIcon-1.0: https://repos.curseforge.com/wow/libdbicon-1-0/trunk/LibDBIcon-1.0
 
 ignore:
   - tests

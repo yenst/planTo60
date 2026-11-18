@@ -26,8 +26,9 @@ A leveling planner for WoW Forever and Classic Era. Set a target level, a deadli
   - History: plan-vs-actual chart and a daily log.
   - Characters: every character's level, goal and status.
   - Settings.
+- **Minimap button:** click to open the planner, right-click to show or hide the tracker, drag to move it around the minimap. Hide it under Settings → Minimap or with `/pt60 minimap`. It's a standard LibDBIcon button, so minimap button collectors pick it up.
 - **LDB feed:** for Titan Panel, ElvUI or EllesmereUI data bars, if one of them is installed.
-- **Commands:** `/pt60 goal 60 12/12/2026`, `/pt60 afk 30`, `/pt60 time 1.5`, `/pt60 status`, `/pt60 tracker`, `/pt60 lock`, `/pt60 export`, `/pt60 import`.
+- **Commands:** `/pt60 goal 60 12/12/2026`, `/pt60 afk 30`, `/pt60 time 1.5`, `/pt60 status`, `/pt60 tracker`, `/pt60 lock`, `/pt60 minimap`, `/pt60 export`, `/pt60 import`.
 
 ## JSON export
 
@@ -51,6 +52,8 @@ lua5.1 tests/smoke.lua    # whole addon against a mocked WoW API
 ```
 
 `tools/install.sh` looks under `$WOW_DIR` (or pass the WoW folder as an argument).
+
+The libraries in `Libs/` (LibStub, CallbackHandler, LibDataBroker, LibDBIcon) are not in git; the packager pulls them in from the `.pkgmeta` externals. A dev checkout without them still loads, and the minimap button appears whenever another addon has loaded LibDBIcon.
 
 ## Release
 

@@ -95,6 +95,17 @@ GetQuestLogSelection = function() return selectedQuest end
 SelectQuestLogEntry = function(i) selectedQuest = i end
 GetQuestLogRewardXP = function() return questXP[selectedQuest] end
 
+-- Stand-ins for LibDataBroker and LibDBIcon (embeds.xml isn't loaded here).
+local minimapIcon = { shown = {} }
+function minimapIcon:Register(name, obj, db) self.obj, self.db, self.shown[name] = obj, db, not db.hide end
+function minimapIcon:Show(name) self.shown[name] = true end
+function minimapIcon:Hide(name) self.shown[name] = false end
+local libs = {
+    ["LibDataBroker-1.1"] = { NewDataObject = function(_, _, obj) return obj end },
+    ["LibDBIcon-1.0"] = minimapIcon,
+}
+LibStub = setmetatable({}, { __call = function(_, name) return libs[name] end })
+
 local ns = {}
 for line in io.lines("planTo60.toc") do
     if line:match("%.lua$") then
@@ -215,6 +226,16 @@ assert(ns.Plan.Weight(ns.char, ns.Day.Today()) == ns.Plan.WeekdayHours(ns.char, 
 clickLabel("Reset")
 assert(ns.status.target == beforeAfk, "reset restores today's target")
 SlashCmdList.PT60("status")
+-- Minimap button: registered shown; the slash command and setting hide it.
+-- No trailing digit in the name, or EllesmereUI's flyout skips it as a pin.
+assert(next(minimapIcon.shown) and not next(minimapIcon.shown):match("%d$"), "button name ends in a digit")
+assert(minimapIcon.shown.planTo60MinimapButton and minimapIcon.db == ns.db.minimap, "minimap button registered")
+SlashCmdList.PT60("minimap")
+assert(not minimapIcon.shown.planTo60MinimapButton and ns.db.minimap.hide, "minimap button hidden")
+SlashCmdList.PT60("minimap")
+assert(minimapIcon.shown.planTo60MinimapButton, "minimap button shown again")
+minimapIcon.obj.OnTooltipShow(GameTooltip)
+minimapIcon.obj.OnClick(nil, "LeftButton")
 SlashCmdList.PT60("tracker")
 SlashCmdList.PT60("help")
 -- Finished quests show up as banked XP; the selection is restored.

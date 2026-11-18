@@ -29,7 +29,10 @@ for flavor in _forever_ _classic_beta_ _classic_era_; do
         ln -s "$repo" "$addons/planTo60"
     else
         mkdir "$addons/planTo60"
-        cp -r "$repo"/planTo60.toc "$repo"/*.lua "$repo"/Media "$addons/planTo60/"
+        cp -r "$repo"/planTo60.toc "$repo"/*.lua "$repo"/embeds.xml "$repo"/Media "$addons/planTo60/"
+        if [[ -d "$repo/Libs" ]]; then
+            cp -r "$repo/Libs" "$addons/planTo60/"
+        fi
     fi
     echo "$mode: $addons/planTo60"
     installed=$((installed + 1))

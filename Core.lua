@@ -9,6 +9,7 @@ local DEFAULT_SETTINGS = {
     loginSummary = true,
     targetToast = true,
     toastSound = true,
+    minimapButton = true,
 }
 
 local function initDB()
@@ -300,6 +301,7 @@ local HELP = {
     "/pt60 time <hours> - set today's play time (e.g. /pt60 time 1.5)",
     "/pt60 tracker - show / hide the tracker",
     "/pt60 lock - lock / unlock the tracker",
+    "/pt60 minimap - show / hide the minimap button",
     "/pt60 export | import - JSON export and import",
 }
 
@@ -312,6 +314,14 @@ local COMMANDS = {
         ns.Refresh()
     end,
     lock = function() ns.Tracker.ToggleLock() end,
+    minimap = function()
+        if not ns.Broker.HasMinimapButton() then
+            ns.Print("The minimap button needs LibDBIcon-1.0, which didn't load.")
+            return
+        end
+        ns.db.settings.minimapButton = not ns.db.settings.minimapButton
+        ns.Refresh()
+    end,
     afk = function(args)
         local minutes = tonumber(args)
         if not minutes or not ns.char.goal then
