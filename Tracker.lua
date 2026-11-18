@@ -66,6 +66,60 @@ function Tracker.ShowWaitingXP(tip)
     return true
 end
 
+local function percent(fraction)
+    return string.format("%.1f%%", fraction * 100)
+end
+
+-- Tooltip for the current level: XP through it and the rested XP on top.
+local function showLevelTip(tip)
+    local cur, max = UnitXP("player"), UnitXPMax("player")
+    tip:AddLine("Level " .. ns.char.level, 1, 1, 1)
+    if max > 0 then
+        tip:AddDoubleLine("XP", string.format("%d / %d (%s)", cur, max, percent(cur / max)), 0.8, 0.8, 0.8, 1, 1, 1)
+        tip:AddDoubleLine("To next level", tostring(max - cur), 0.8, 0.8, 0.8, 1, 1, 1)
+    end
+    local banked, rested = ns.Quests.banked.xp, ns.restedXP or 0
+    if banked > 0 then
+        tip:AddDoubleLine(Theme.Icon("quest", 14) .. " Completed quests", tostring(banked), 1, 0.65, 0, 1, 1, 1)
+    end
+    if rested > 0 then
+        tip:AddDoubleLine(Theme.Icon("rested", 14) .. " Rested", tostring(rested), 0.35, 0.62, 1, 1, 1, 1)
+    end
+end
+
+-- Tooltip for today's target.
+local function showTodayTip(tip)
+    local s = ns.status
+    tip:AddLine("Today", 1, 1, 1)
+    if not s then
+        tip:AddLine("No goal yet - click to plan your leveling", 0.8, 0.8, 0.8)
+    elseif s.state == "done" then
+        tip:AddLine("Goal reached", 0.8, 0.8, 0.8)
+    elseif s.offToday then
+        tip:AddDoubleLine("Rest day", s.gained .. " XP", 0.8, 0.8, 0.8, 1, 1, 1)
+    else
+        tip:AddDoubleLine("XP", string.format("%d / %d (%s)", s.gained, s.target, percent(s.gained / s.target)), 0.8, 0.8, 0.8, 1, 1, 1)
+        if s.banked > 0 then
+            tip:AddDoubleLine(Theme.Icon("quest", 14) .. " With quests", percent((s.gained + s.banked) / s.target), 1, 0.65, 0, 1, 1, 1)
+        end
+        if s.left > 0 then
+            tip:AddDoubleLine("Left", tostring(s.left), 0.8, 0.8, 0.8, 1, 1, 1)
+        end
+        if s.leftSeconds and s.left > 0 then
+            tip:AddDoubleLine("Time left", ns.FormatDuration(s.leftSeconds), 0.8, 0.8, 0.8, 1, 1, 1)
+        end
+    end
+end
+
+-- The thin bar shows the level normally, today's target when swapped.
+function Tracker.ShowThinBar(tip)
+    if settings().levelMainBar then
+        showTodayTip(tip)
+    else
+        showLevelTip(tip)
+    end
+end
+
 -- Colours from the classic XP-bar look: blue-to-purple fill, orange for
 -- finished quests, blue for rested XP.
 local FILL_FROM, FILL_TO = { 0.39, 0.39, 1 }, { 0.78, 0.39, 1 }
@@ -119,6 +173,7 @@ function Tracker.Build()
     frame.levelFill:SetPoint("LEFT")
     setGradient(frame.levelFill, FILL_FROM, FILL_TO)
     frame.levelInner = levelInner
+    frame.levelBar = levelBar
 
     local bar = W.Panel(frame, { 0.06, 0.07, 0.10, 0.85 })
     bar:SetPoint("TOPLEFT", levelBar, "BOTTOMLEFT", 0, -LEVEL_GAP)
@@ -147,23 +202,50 @@ function Tracker.Build()
     frame.sub = outlined(frame, 12, Theme.text, "CENTER")
     frame.sub:SetPoint("TOP", bar, "BOTTOM", 0, -5)
 
-    frame:SetScript("OnDragStart", function(self)
+    local function dragStart()
         if not settings().lockTracker then
-            self:StartMoving()
+            frame:StartMoving()
         end
-    end)
-    frame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        local point, _, relPoint, x, y = self:GetPoint()
+    end
+    local function dragStop()
+        frame:StopMovingOrSizing()
+        local point, _, relPoint, x, y = frame:GetPoint()
         savePosition(point, relPoint, x, y)
-    end)
-    frame:SetScript("OnClick", function(_, button)
+    end
+    local function click(button)
         if button == "RightButton" then
             Tracker.ToggleLock()
         else
             ns.OpenMain()
         end
+    end
+    frame:SetScript("OnDragStart", dragStart)
+    frame:SetScript("OnDragStop", dragStop)
+    frame:SetScript("OnClick", function(_, button) click(button) end)
+
+    -- The thin bar takes the mouse for its own tooltip, so it passes clicks
+    -- and drags on to the tracker. Its hit area reaches a bit above the bar.
+    levelBar:EnableMouse(true)
+    levelBar:SetHitRectInsets(0, 0, -4, 0)
+    levelBar:RegisterForDrag("LeftButton")
+    local dragged
+    levelBar:SetScript("OnDragStart", function()
+        dragged = true
+        dragStart()
     end)
+    levelBar:SetScript("OnDragStop", dragStop)
+    levelBar:SetScript("OnMouseDown", function() dragged = false end)
+    levelBar:SetScript("OnMouseUp", function(self, button)
+        if not dragged and self:IsMouseOver() then
+            click(button)
+        end
+    end)
+    levelBar:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        Tracker.ShowThinBar(GameTooltip)
+        GameTooltip:Show()
+    end)
+    levelBar:SetScript("OnLeave", function() GameTooltip:Hide() end)
     frame:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
         if Tracker.ShowWaitingXP(GameTooltip) then
@@ -188,10 +270,6 @@ end
 function Tracker.ResetPosition()
     settings().trackerPos = nil
     applyPosition()
-end
-
-local function percent(fraction)
-    return string.format("%.1f%%", fraction * 100)
 end
 
 -- Width of the bar's segments: progress, then finished quests, then rested
@@ -263,7 +341,7 @@ end
 -- and rested XP on top), the thin bar shows today's target.
 local function showLevelMain(level, daily, s)
     local cur, max, part = levelProgress()
-    setFill(frame.levelFill, frame.levelInner, daily)
+    setFill(frame.levelFill, frame.levelInner, clamp01(daily))
     frame.levelText:SetText("Level " .. level)
     if max > 0 then
         frame.xpText:SetText(cur .. " / " .. max)
@@ -275,7 +353,7 @@ local function showLevelMain(level, daily, s)
         setSegments(0, 0, 0)
     end
     if s then
-        frame.sub:SetText("Today " .. percent(daily) .. "     " .. frame.sub:GetText())
+        frame.sub:SetText("Today " .. frame.pctTodayText .. "     " .. frame.sub:GetText())
     end
 end
 
@@ -301,10 +379,11 @@ function Tracker.Update()
         frame.levelText:SetText("Level " .. level)
         frame.xpText:SetText(s.gained .. " / " .. s.target)
         local withQuests = s.banked > 0 and string.format(" (%s)", percent((s.gained + s.banked) / s.target)) or ""
-        frame.pctText:SetText(percent(s.gained / s.target) .. withQuests)
+        frame.pctTodayText = percent(s.gained / s.target) .. withQuests
+        frame.pctText:SetText(frame.pctTodayText)
         setSegments(s.gained / s.target, s.banked / s.target, rested / s.target)
         frame.sub:SetText(subText(s, rested))
-        daily, active = clamp01(s.gained / s.target), true
+        daily, active = s.gained / s.target, true
     end
 
     if settings().levelMainBar then
