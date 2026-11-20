@@ -1,5 +1,7 @@
-# Push a tag like v1.0.0 to build the addon zip and publish it to the GitHub
-# release and (once CF_API_KEY and X-Curse-Project-ID are set) CurseForge.
+# Push a tag like v1.0.9 to release: runs the tests, builds the addon zip
+# with the BigWigs packager and uploads it to CurseForge (project ID from the
+# .toc's X-Curse-Project-ID) and to a GitHub release.
+# Needs the repo secret CF_API_KEY (Settings > Secrets and variables > Actions).
 name: Release
 
 on:
@@ -19,6 +21,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Check release setup
+        run: |
+          toc="planTo60.toc"
+          if [ -z "$CF_API_KEY" ]; then
+            echo "::error::The CF_API_KEY secret is missing, so nothing would reach CurseForge."
+            exit 1
+          fi
+          if ! grep -qE '^## X-Curse-Project-ID: *[0-9]+' "$toc"; then
+            echo "::error::$toc has no '## X-Curse-Project-ID: <id>' line."
+            exit 1
+          fi
 
       - name: Run tests
         run: |

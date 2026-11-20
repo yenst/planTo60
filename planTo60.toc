@@ -3,6 +3,7 @@
 ## Notes: Plan your leveling: set a target level and a deadline, get a daily XP goal that recalculates itself.
 ## Author: yenst
 ## Version: @project-version@
+## X-Curse-Project-ID: 1783417
 ## X-License: MIT
 ## X-Website: https://github.com/yenst/planTo60
 ## IconTexture: Interface\AddOns\planTo60\Media\icon
