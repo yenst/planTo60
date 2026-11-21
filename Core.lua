@@ -34,9 +34,41 @@ local function initDB()
     ns.db = db
 end
 
+-- GetRealmName() can come back empty at login (seen on WoW Forever). Fall back
+-- to the realm this name was last seen on rather than starting a blank entry.
+local function realmFor(name)
+    local realm = GetRealmName()
+    if realm and realm ~= "" then
+        return realm
+    end
+    local best
+    for _, c in pairs(ns.db.chars) do
+        if c.name == name and c.realm and c.realm ~= "" and (not best or (c.lastSeen or 0) > (best.lastSeen or 0)) then
+            best = c
+        end
+    end
+    return best and best.realm or ""
+end
+
+-- Drops an entry saved under "Name-" (empty realm) when the real entry exists;
+-- the real one is kept as is. Without a real entry the stray one becomes it.
+local function dropStray(name, key)
+    local strayKey = name .. "-"
+    local stray = ns.db.chars[strayKey]
+    if key == strayKey or not stray then
+        return
+    end
+    ns.db.chars[strayKey] = nil
+    if not ns.db.chars[key] then
+        ns.db.chars[key] = stray
+    end
+end
+
 local function loadCharacter()
-    local name, realm = UnitName("player"), GetRealmName()
+    local name = UnitName("player")
+    local realm = realmFor(name)
     local key = name .. "-" .. realm
+    dropStray(name, key)
     local c = ns.db.chars[key] or { days = {}, schedule = Plan.DefaultSchedule() }
     ns.db.chars[key] = c
     -- Pace samples are ratios against the guide curve; older raw-XP samples are dropped.
